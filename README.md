@@ -1,0 +1,304 @@
+# ClaudeUp 🚀
+
+**Automate GitHub repository creation for Claude Code Web**
+
+ClaudeUp eliminates the tedious manual steps required to set up a new GitHub repository for use with Claude Code Web. With a single command, it:
+
+- ✅ Creates a new private GitHub repository
+- ✅ Initializes it locally with git
+- ✅ Adds Claude as a collaborator
+- ✅ Sets up initial files (README, .gitignore)
+- ✅ Creates and pushes the initial commit
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.7 or higher
+- Git installed and configured
+- A GitHub personal access token
+
+### Installation
+
+#### Option 1: Install with pip (Recommended)
+
+```bash
+pip install -e .
+```
+
+After installation, you can use `claudeup` command directly:
+
+```bash
+claudeup my-awesome-project
+```
+
+#### Option 2: Use directly
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run directly
+./claudeup my-awesome-project
+# or
+python3 claudeup.py my-awesome-project
+```
+
+### Setup GitHub Token
+
+ClaudeUp needs a GitHub personal access token to create repositories and manage collaborators.
+
+1. Go to [GitHub Settings > Tokens](https://github.com/settings/tokens)
+2. Click "Generate new token (classic)"
+3. Give it a name (e.g., "ClaudeUp")
+4. Select the `repo` scope (full control of private repositories)
+5. Generate and copy the token
+
+Set it as an environment variable:
+
+```bash
+export GITHUB_TOKEN=your_token_here
+```
+
+Or add to your `~/.bashrc` or `~/.zshrc` for persistence:
+
+```bash
+echo 'export GITHUB_TOKEN=your_token_here' >> ~/.bashrc
+source ~/.bashrc
+```
+
+## Usage
+
+### Basic Usage
+
+```bash
+# Create a new repository in the current directory
+claudeup my-project
+
+# Create with a description
+claudeup my-project -d "A cool new project"
+
+# Create in a specific directory
+claudeup my-project -p ~/projects/my-project
+
+# Pass token directly (not recommended for security)
+claudeup my-project --token ghp_yourtokenhere
+```
+
+### Advanced Options
+
+```bash
+# Skip adding Claude as collaborator
+claudeup my-project --no-collaborator
+
+# Create a public repository (default is private)
+claudeup my-project --public
+
+# Use a custom collaborator username
+claudeup my-project --claude-username my-custom-bot
+
+# Combine options
+claudeup my-project \
+  -d "My awesome project" \
+  -p ~/projects/new-project \
+  --claude-username claude-bot
+```
+
+### Command-Line Options
+
+```
+positional arguments:
+  repo_name             Name of the repository to create
+
+optional arguments:
+  -h, --help            Show this help message and exit
+  -d, --description     Repository description
+  -p, --path            Path to initialize repository (defaults to current directory)
+  --token               GitHub personal access token (or set GITHUB_TOKEN env var)
+  --claude-username     GitHub username to add as collaborator (default: claude-code-app)
+  --no-collaborator     Skip adding collaborator
+  --public              Create a public repository (default is private)
+```
+
+## What ClaudeUp Does
+
+When you run ClaudeUp, here's what happens:
+
+1. **Creates GitHub Repository**: Uses the GitHub API to create a new private repository under your account
+2. **Initializes Local Git**: Sets up a git repository in the specified directory
+3. **Adds Remote**: Configures the GitHub repository as the remote origin
+4. **Creates Initial Files**:
+   - `README.md` with project name and description
+   - `.gitignore` with common exclusions for Python, IDEs, and OS files
+5. **Adds Collaborator**: Invites Claude (or specified user) as a collaborator with push access
+6. **Commits and Pushes**: Creates an initial commit and pushes to the main branch
+
+## Examples
+
+### Start a new Python project
+
+```bash
+claudeup ml-experiment -d "Machine learning experiment with Claude"
+cd ml-experiment
+# Start coding!
+```
+
+### Create multiple projects
+
+```bash
+for project in web-app api-server data-pipeline; do
+  claudeup $project -p ~/projects/$project
+done
+```
+
+### Use in a script
+
+```bash
+#!/bin/bash
+# setup-project.sh
+
+PROJECT_NAME="$1"
+DESCRIPTION="$2"
+
+if [ -z "$PROJECT_NAME" ]; then
+  echo "Usage: $0 <project-name> [description]"
+  exit 1
+fi
+
+# Create repo with ClaudeUp
+claudeup "$PROJECT_NAME" -d "$DESCRIPTION"
+
+# Add additional setup
+cd "$PROJECT_NAME"
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Troubleshooting
+
+### "Error: GitHub token not provided"
+
+Make sure you've set the `GITHUB_TOKEN` environment variable:
+
+```bash
+export GITHUB_TOKEN=your_token_here
+```
+
+Or pass it directly with `--token`:
+
+```bash
+claudeup my-project --token ghp_yourtokenhere
+```
+
+### "Repository already exists"
+
+If the repository name already exists on GitHub, ClaudeUp will notify you and attempt to use the existing repository for local setup.
+
+### "Failed to add collaborator"
+
+This can happen if:
+- The Claude username doesn't exist on GitHub
+- You don't have permission to add collaborators
+- The repository is a personal repository
+
+You can skip collaborator addition with `--no-collaborator` and add them manually later.
+
+### Permission denied on push
+
+If you get permission errors when pushing, make sure:
+1. Your GitHub token has the `repo` scope
+2. You have write access to the repository
+3. Your git is configured with the correct credentials
+
+## Configuration
+
+### Custom Default Settings
+
+You can create a configuration file at `~/.claudeup.json`:
+
+```json
+{
+  "claude_username": "my-custom-claude-bot",
+  "default_private": true,
+  "default_description": "Created with ClaudeUp"
+}
+```
+
+### SSH vs HTTPS
+
+By default, ClaudeUp uses SSH URLs for git remotes (`git@github.com:user/repo.git`). If you prefer HTTPS, modify the `init_local_repo` method in `claudeup.py`.
+
+## Development
+
+### Running Tests
+
+```bash
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+pytest tests/
+```
+
+### Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## Security Notes
+
+- **Never commit your GitHub token** to version control
+- Store tokens in environment variables or secure credential managers
+- Use tokens with minimal required scopes
+- Rotate tokens regularly
+- Consider using GitHub Apps for organization-wide deployments
+
+## License
+
+MIT License - feel free to use this in your projects!
+
+## FAQ
+
+**Q: What permissions does ClaudeUp need?**
+
+A: ClaudeUp needs a GitHub token with the `repo` scope to create repositories and manage collaborators.
+
+**Q: Can I use this for organization repositories?**
+
+A: Yes! Just make sure your token has access to the organization and you have permission to create repositories.
+
+**Q: What's the default Claude username?**
+
+A: By default, ClaudeUp tries to add `claude-code-app` as a collaborator. You can customize this with `--claude-username`.
+
+**Q: Does this work with GitHub Enterprise?**
+
+A: Currently, ClaudeUp is designed for github.com. For GitHub Enterprise, you'd need to modify the `api_base` URL in the code.
+
+**Q: Can I use this in CI/CD?**
+
+A: Yes! Just make sure to pass the token securely (e.g., via encrypted environment variables).
+
+## Related Tools
+
+- [GitHub CLI (gh)](https://cli.github.com/) - Official GitHub command-line tool
+- [hub](https://hub.github.com/) - Extended git command-line tool
+- [git-extras](https://github.com/tj/git-extras) - Additional git utilities
+
+## Support
+
+If you encounter issues or have questions:
+
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Review [GitHub's API documentation](https://docs.github.com/en/rest)
+3. Open an issue on the repository
+
+---
+
+Made with ❤️ for Claude Code Web users
