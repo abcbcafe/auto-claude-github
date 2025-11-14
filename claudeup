@@ -4,5 +4,11 @@
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Execute the Python script
-python3 "$SCRIPT_DIR/claudeup.py" "$@"
+# Check if uv is available
+if command -v uv &> /dev/null; then
+    # Use uv run if available for better performance
+    uv run "$SCRIPT_DIR/claudeup.py" "$@"
+else
+    # Fall back to python3 if uv is not installed
+    python3 "$SCRIPT_DIR/claudeup.py" "$@"
+fi

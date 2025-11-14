@@ -2,28 +2,45 @@
 
 **Automate GitHub repository creation for Claude Code Web**
 
-ClaudeUp eliminates the tedious manual steps required to set up a new GitHub repository for use with Claude Code Web. With a single command, it:
+ClaudeUp eliminates the tedious manual steps required to set up a new GitHub repository for use with Claude Code Web. Built with modern Python tooling and [uv](https://docs.astral.sh/uv/) for blazingly fast performance.
+
+With a single command, it:
 
 - ✅ Creates a new private GitHub repository
 - ✅ Initializes it locally with git
 - ✅ Adds Claude as a collaborator
 - ✅ Sets up initial files (README, .gitignore)
 - ✅ Creates and pushes the initial commit
+- ⚡ **Uses uv for 10-100x faster dependency management**
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.7 or higher
+- Python 3.8 or higher
+- [uv](https://docs.astral.sh/uv/) - Fast Python package installer
 - Git installed and configured
 - A GitHub personal access token
 
 ### Installation
 
-#### Option 1: Install with pip (Recommended)
+#### Install uv (if you haven't already)
 
 ```bash
-pip install -e .
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or with pip
+pip install uv
+
+# Or with homebrew
+brew install uv
+```
+
+#### Option 1: Install with uv (Recommended)
+
+```bash
+uv pip install -e .
 ```
 
 After installation, you can use `claudeup` command directly:
@@ -36,12 +53,12 @@ claudeup my-awesome-project
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 
 # Run directly
 ./claudeup my-awesome-project
 # or
-python3 claudeup.py my-awesome-project
+uv run claudeup.py my-awesome-project
 ```
 
 ### Setup GitHub Token
@@ -170,9 +187,9 @@ claudeup "$PROJECT_NAME" -d "$DESCRIPTION"
 
 # Add additional setup
 cd "$PROJECT_NAME"
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
 ```
 
 ## Troubleshooting
@@ -235,10 +252,10 @@ By default, ClaudeUp uses SSH URLs for git remotes (`git@github.com:user/repo.gi
 
 ```bash
 # Install dev dependencies
-pip install -r requirements-dev.txt
+uv pip install --dev
 
 # Run tests
-pytest tests/
+uv run pytest tests/
 ```
 
 ### Contributing
@@ -285,9 +302,21 @@ A: Currently, ClaudeUp is designed for github.com. For GitHub Enterprise, you'd 
 
 A: Yes! Just make sure to pass the token securely (e.g., via encrypted environment variables).
 
+## Why uv?
+
+ClaudeUp uses [uv](https://docs.astral.sh/uv/) instead of pip because it's:
+
+- **10-100x faster** than pip for package installation
+- **Written in Rust** for maximum performance
+- **Drop-in replacement** for pip with better dependency resolution
+- **Modern tooling** that's becoming the standard in Python
+- **Better caching** for repeated installations
+
 ## Related Tools
 
+- [uv](https://docs.astral.sh/uv/) - Fast Python package installer (used by ClaudeUp)
 - [GitHub CLI (gh)](https://cli.github.com/) - Official GitHub command-line tool
+- [Ruff](https://docs.astral.sh/ruff/) - Fast Python linter (recommended for projects)
 - [hub](https://hub.github.com/) - Extended git command-line tool
 - [git-extras](https://github.com/tj/git-extras) - Additional git utilities
 

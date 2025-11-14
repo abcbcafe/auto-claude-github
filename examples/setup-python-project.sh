@@ -55,36 +55,35 @@ def test_main(capsys):
     assert "Hello from ClaudeUp project!" in captured.out
 EOF
 
-# Create requirements.txt
-cat > requirements.txt << 'EOF'
-# Add your dependencies here
-EOF
-
-# Create requirements-dev.txt
-cat > requirements-dev.txt << 'EOF'
--r requirements.txt
-pytest>=7.0.0
-pytest-cov>=4.0.0
-black>=22.0.0
-flake8>=5.0.0
-mypy>=0.990
-EOF
-
-# Create pyproject.toml
+# Create pyproject.toml with modern uv configuration
 cat > pyproject.toml << EOF
 [build-system]
-requires = ["setuptools>=45", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "$PROJECT_NAME"
 version = "0.1.0"
 description = "$DESCRIPTION"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
+dependencies = [
+    # Add your dependencies here
+]
 
-[tool.black]
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.ruff]
 line-length = 88
-target-version = ['py37', 'py38', 'py39', 'py310', 'py311']
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -93,13 +92,14 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 EOF
 
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# Create virtual environment with uv
+uv venv
 
-# Install dependencies
-pip install --upgrade pip
-pip install -r requirements-dev.txt
+# Activate virtual environment
+source .venv/bin/activate
+
+# Install dependencies with uv
+uv pip install -e ".[dev]"
 
 # Update README with project details
 cat >> README.md << 'EOF'
@@ -108,34 +108,52 @@ cat >> README.md << 'EOF'
 
 ### Setup
 
-1. Create a virtual environment:
+This project uses [uv](https://docs.astral.sh/uv/) for fast dependency management.
+
+1. Install uv (if not already installed):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. Install dependencies:
+2. Create a virtual environment:
    ```bash
-   pip install -r requirements-dev.txt
+   uv venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   uv pip install -e ".[dev]"
    ```
 
 ### Running Tests
 
 ```bash
-pytest tests/
+uv run pytest tests/
 ```
 
-### Code Formatting
+### Code Formatting & Linting
 
 ```bash
-black src/ tests/
+# Format and lint with ruff
+uv run ruff check src/ tests/
+uv run ruff format src/ tests/
 ```
 
-### Linting
+### Quick Commands
 
 ```bash
-flake8 src/ tests/
-mypy src/
+# Run the application
+uv run python src/main.py
+
+# Run tests with coverage
+uv run pytest tests/ --cov=src --cov-report=html
+
+# Install a new dependency
+uv pip install <package-name>
+
+# Update all dependencies
+uv pip install --upgrade -e ".[dev]"
 ```
 
 ## Project Structure
@@ -149,8 +167,7 @@ mypy src/
 │   ├── __init__.py
 │   └── test_main.py
 ├── docs/               # Documentation
-├── requirements.txt    # Production dependencies
-├── requirements-dev.txt # Development dependencies
+├── pyproject.toml      # Project configuration
 └── README.md          # This file
 ```
 EOF
@@ -167,5 +184,5 @@ echo "   Location: $(pwd)"
 echo ""
 echo "To get started:"
 echo "  cd $PROJECT_NAME"
-echo "  source venv/bin/activate"
-echo "  python src/main.py"
+echo "  source .venv/bin/activate"
+echo "  uv run python src/main.py"
