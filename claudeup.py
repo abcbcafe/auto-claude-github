@@ -13,6 +13,7 @@ import argparse
 import os
 import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -21,6 +22,14 @@ try:
 except ImportError:
     print("Error: 'requests' library not found. Install with: pip install requests")
     sys.exit(1)
+
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+except ImportError:
+    # matplotlib is optional, only needed for stars command
+    plt = None
+    mdates = None
 
 
 class ClaudeUp:
@@ -374,6 +383,137 @@ Thumbs.db
         )
         print(f"Pushed to remote branch '{branch}'")
 
+    def get_stargazers(self, repo_name: str) -> list:
+        """
+        Get stargazers for a repository with timestamps.
+
+        Args:
+            repo_name: Name of the repository (format: owner/repo or just repo)
+
+        Returns:
+            List of stargazer events with timestamps
+        """
+        # Get the authenticated user first
+        user_response = requests.get(
+            f"{self.api_base}/user", headers=self.headers
+        )
+        if user_response.status_code != 200:
+            raise Exception("Failed to get user information")
+
+        username = user_response.json()["login"]
+
+        # Handle both "owner/repo" and "repo" formats
+        if "/" in repo_name:
+            full_repo = repo_name
+        else:
+            full_repo = f"{username}/{repo_name}"
+
+        # Use the special accept header to get star timestamps
+        headers = self.headers.copy()
+        headers["Accept"] = "application/vnd.github.star+json"
+
+        stargazers = []
+        page = 1
+        per_page = 100
+
+        print(f"Fetching stargazers for {full_repo}...")
+
+        while True:
+            url = f"{self.api_base}/repos/{full_repo}/stargazers"
+            params = {"page": page, "per_page": per_page}
+            response = requests.get(url, headers=headers, params=params)
+
+            if response.status_code != 200:
+                raise Exception(
+                    f"Failed to get stargazers: {response.status_code} - {response.text}"
+                )
+
+            page_data = response.json()
+            if not page_data:
+                break
+
+            stargazers.extend(page_data)
+            print(f"  Fetched {len(stargazers)} stargazers...")
+
+            # Check if there are more pages
+            if len(page_data) < per_page:
+                break
+
+            page += 1
+
+        print(f"Total stargazers: {len(stargazers)}")
+        return stargazers
+
+    def generate_star_graph(
+        self,
+        repo_name: str,
+        output_file: Optional[str] = None,
+        show: bool = True,
+    ):
+        """
+        Generate a graph showing star growth over time.
+
+        Args:
+            repo_name: Name of the repository
+            output_file: Optional path to save the graph image
+            show: Whether to display the graph interactively
+        """
+        if plt is None:
+            print("Error: matplotlib is required for generating star graphs")
+            print("Install it with: pip install matplotlib")
+            sys.exit(1)
+
+        # Get stargazer data
+        stargazers = self.get_stargazers(repo_name)
+
+        if not stargazers:
+            print(f"Repository '{repo_name}' has no stars yet.")
+            return
+
+        # Extract timestamps and create cumulative counts
+        timestamps = []
+        for star in stargazers:
+            starred_at = star.get("starred_at")
+            if starred_at:
+                timestamps.append(datetime.strptime(starred_at, "%Y-%m-%dT%H:%M:%SZ"))
+
+        timestamps.sort()
+        counts = list(range(1, len(timestamps) + 1))
+
+        # Create the plot
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(timestamps, counts, linewidth=2, color="#2E86AB")
+
+        # Style the plot
+        ax.set_xlabel("Date", fontsize=12, fontweight="bold")
+        ax.set_ylabel("Total Stars", fontsize=12, fontweight="bold")
+        ax.set_title(
+            f"Star Growth for {repo_name}",
+            fontsize=14,
+            fontweight="bold",
+            pad=20,
+        )
+        ax.grid(True, alpha=0.3, linestyle="--")
+
+        # Format x-axis dates
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
+
+        # Add some padding
+        plt.tight_layout()
+
+        # Save if output file specified
+        if output_file:
+            plt.savefig(output_file, dpi=300, bbox_inches="tight")
+            print(f"\nGraph saved to: {output_file}")
+
+        # Show if requested
+        if show:
+            plt.show()
+
+        plt.close()
+
     def setup(
         self,
         repo_name: str,
@@ -431,49 +571,93 @@ Thumbs.db
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="ClaudeUp - Automate GitHub repository creation for Claude Code Web"
+        description="ClaudeUp - Automate GitHub repository creation for Claude Code Web",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+
+    # Add global token argument
     parser.add_argument(
+        "--token",
+        help="GitHub personal access token (or set GITHUB_TOKEN environment variable)",
+    )
+
+    # Create subparsers for different commands
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Create command (default behavior)
+    create_parser = subparsers.add_parser(
+        "create",
+        help="Create a new GitHub repository",
+        description="Create a new GitHub repository and set it up for Claude Code Web",
+    )
+    create_parser.add_argument(
         "repo_name",
         help="Name of the repository to create",
     )
-    parser.add_argument(
+    create_parser.add_argument(
         "-d",
         "--description",
         default="",
         help="Repository description",
     )
-    parser.add_argument(
+    create_parser.add_argument(
         "-p",
         "--path",
         help="Path to initialize repository (defaults to current directory)",
     )
-    parser.add_argument(
-        "--token",
-        help="GitHub personal access token (or set GITHUB_TOKEN environment variable)",
-    )
-    parser.add_argument(
+    create_parser.add_argument(
         "--no-app",
         action="store_true",
         help="Skip installing GitHub App",
     )
-    parser.add_argument(
+    create_parser.add_argument(
         "--app-slug",
         default="claude",
         help="GitHub App slug to install (default: claude)",
     )
-    parser.add_argument(
+    create_parser.add_argument(
         "--installation-id",
         type=int,
         help="GitHub App installation ID (or set CLAUDE_INSTALLATION_ID env var)",
     )
-    parser.add_argument(
+    create_parser.add_argument(
         "--public",
         action="store_true",
         help="Create a public repository (default is private)",
     )
 
+    # Stars command (new feature)
+    stars_parser = subparsers.add_parser(
+        "stars",
+        help="Show star growth graph for a repository",
+        description="Generate and display a star growth graph for a GitHub repository",
+    )
+    stars_parser.add_argument(
+        "repo_name",
+        help="Name of the repository (format: owner/repo or just repo)",
+    )
+    stars_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output file path to save the graph (e.g., stars.png)",
+    )
+    stars_parser.add_argument(
+        "--no-show",
+        action="store_true",
+        help="Don't display the graph interactively (only save to file)",
+    )
+
     args = parser.parse_args()
+
+    # If no command specified, check if first arg looks like a repo name (backwards compatibility)
+    if args.command is None:
+        if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
+            # Backwards compatibility: treat as create command
+            sys.argv.insert(1, "create")
+            return main()
+        else:
+            parser.print_help()
+            sys.exit(1)
 
     # Get GitHub token
     token = args.token or os.environ.get("GITHUB_TOKEN")
@@ -486,29 +670,38 @@ def main():
         print("  3. Set it as: export GITHUB_TOKEN=your_token_here")
         sys.exit(1)
 
-    # Get installation ID from args or environment variable
-    installation_id = args.installation_id
-    if installation_id is None:
-        env_installation_id = os.environ.get("CLAUDE_INSTALLATION_ID")
-        if env_installation_id:
-            try:
-                installation_id = int(env_installation_id)
-            except ValueError:
-                print(f"Warning: CLAUDE_INSTALLATION_ID env var is not a valid number: {env_installation_id}")
-
     # Create ClaudeUp instance
     claudeup = ClaudeUp(token)
 
-    # Run setup
+    # Handle commands
     try:
-        claudeup.setup(
-            repo_name=args.repo_name,
-            description=args.description,
-            path=Path(args.path) if args.path else None,
-            install_app=not args.no_app,
-            app_slug=args.app_slug,
-            installation_id=installation_id,
-        )
+        if args.command == "create":
+            # Get installation ID from args or environment variable
+            installation_id = args.installation_id
+            if installation_id is None:
+                env_installation_id = os.environ.get("CLAUDE_INSTALLATION_ID")
+                if env_installation_id:
+                    try:
+                        installation_id = int(env_installation_id)
+                    except ValueError:
+                        print(f"Warning: CLAUDE_INSTALLATION_ID env var is not a valid number: {env_installation_id}")
+
+            claudeup.setup(
+                repo_name=args.repo_name,
+                description=args.description,
+                path=Path(args.path) if args.path else None,
+                install_app=not args.no_app,
+                app_slug=args.app_slug,
+                installation_id=installation_id,
+            )
+
+        elif args.command == "stars":
+            claudeup.generate_star_graph(
+                repo_name=args.repo_name,
+                output_file=args.output,
+                show=not args.no_show,
+            )
+
     except Exception as e:
         print(f"\nError: {e}")
         sys.exit(1)

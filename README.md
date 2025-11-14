@@ -9,6 +9,7 @@ Automate GitHub repository creation for Claude Code Web.
 - Initializes local git repository
 - Creates initial files (README, .gitignore)
 - Commits and pushes to the repository's default branch
+- Generates star growth graphs for repositories
 
 ## Prerequisites
 
@@ -68,30 +69,57 @@ Add to `~/.bashrc` or `~/.zshrc` for persistence.
 
 ## Usage
 
+### Creating a Repository
+
 Basic:
 
 ```bash
-claudeup my-project
-claudeup my-project -d "Project description"
-claudeup my-project -p ~/projects/my-project
+claudeup create my-project
+claudeup create my-project -d "Project description"
+claudeup create my-project -p ~/projects/my-project
 ```
 
 With installation ID override:
 
 ```bash
-claudeup my-project --installation-id 12345678
+claudeup create my-project --installation-id 12345678
 ```
 
 Create public repository:
 
 ```bash
-claudeup my-project --public
+claudeup create my-project --public
+```
+
+**Note:** For backwards compatibility, `claudeup my-project` still works and defaults to the `create` command.
+
+### Viewing Star Growth
+
+Generate and display a star growth graph:
+
+```bash
+claudeup stars my-repo
+claudeup stars owner/repo-name
+```
+
+Save the graph to a file:
+
+```bash
+claudeup stars my-repo -o stars.png
+```
+
+Save without displaying:
+
+```bash
+claudeup stars my-repo -o stars.png --no-show
 ```
 
 ## Options
 
+### Create Command
+
 ```
-claudeup <repo_name> [options]
+claudeup create <repo_name> [options]
 
 Arguments:
   repo_name             Repository name
@@ -104,6 +132,20 @@ Options:
   --public              Create public repository (default: private)
   --no-app              Skip installing GitHub App
   --app-slug            Custom app slug (default: claude)
+```
+
+### Stars Command
+
+```
+claudeup stars <repo_name> [options]
+
+Arguments:
+  repo_name             Repository name (format: owner/repo or just repo)
+
+Options:
+  --token               GitHub token (or use GITHUB_TOKEN env var)
+  -o, --output          Output file path to save the graph (e.g., stars.png)
+  --no-show             Don't display the graph interactively
 ```
 
 ## Troubleshooting
