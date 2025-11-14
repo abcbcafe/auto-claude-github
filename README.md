@@ -9,7 +9,6 @@ With a single command, it:
 - ✅ Creates a new private GitHub repository
 - ✅ Initializes it locally with git
 - ✅ **Installs the Claude GitHub App** (for proper Claude Code Web integration)
-- ✅ Adds Claude as a collaborator (legacy support)
 - ✅ Sets up initial files (README, .gitignore)
 - ✅ Creates and pushes the initial commit
 - ⚡ **Uses uv for 10-100x faster dependency management**
@@ -140,14 +139,11 @@ claudeup my-project --no-app
 # Use a custom GitHub App slug
 claudeup my-project --app-slug my-custom-claude-app
 
-# Skip adding Claude as collaborator (use app installation only)
-claudeup my-project --no-collaborator
-
 # Create a public repository (default is private)
 claudeup my-project --public
 
-# Use a custom collaborator username (legacy method)
-claudeup my-project --claude-username my-custom-bot
+# Add a collaborator user (legacy method, not recommended)
+claudeup my-project --add-collaborator --claude-username my-custom-bot
 
 # Combine options
 claudeup my-project \
@@ -170,8 +166,8 @@ optional arguments:
   --installation-id     GitHub App installation ID (or set CLAUDE_INSTALLATION_ID env var)
   --no-app              Skip installing GitHub App (not recommended)
   --app-slug            GitHub App slug to install (default: claude)
+  --add-collaborator    Add a collaborator user (legacy method, not recommended)
   --claude-username     GitHub username to add as collaborator (default: claude-code-app)
-  --no-collaborator     Skip adding collaborator
   --public              Create a public repository (default is private)
 ```
 
@@ -181,13 +177,12 @@ When you run ClaudeUp, here's what happens:
 
 1. **Creates GitHub Repository**: Uses the GitHub API to create a new private repository under your account
 2. **Installs Claude GitHub App**: Adds the repository to your Claude GitHub App installation (requires the app to be installed on your account first)
-3. **Adds Collaborator** (optional/legacy): Invites Claude user as a collaborator with push access
-4. **Initializes Local Git**: Sets up a git repository in the specified directory
-5. **Adds Remote**: Configures the GitHub repository as the remote origin
-6. **Creates Initial Files**:
+3. **Initializes Local Git**: Sets up a git repository in the specified directory
+4. **Adds Remote**: Configures the GitHub repository as the remote origin
+5. **Creates Initial Files**:
    - `README.md` with project name and description
    - `.gitignore` with common exclusions for Python, IDEs, and OS files
-7. **Commits and Pushes**: Creates an initial commit and pushes to the main branch
+6. **Commits and Pushes**: Creates an initial commit and pushes to the main branch
 
 ## Examples
 
@@ -278,15 +273,6 @@ Use `--no-app` to skip app installation entirely
 
 If the repository name already exists on GitHub, ClaudeUp will notify you and attempt to use the existing repository for local setup.
 
-### "Failed to add collaborator"
-
-This can happen if:
-- The Claude username doesn't exist on GitHub
-- You don't have permission to add collaborators
-- The repository is a personal repository
-
-You can skip collaborator addition with `--no-collaborator` and add them manually later.
-
 ### "Failed to add repository to GitHub App installation"
 
 This can happen if:
@@ -362,7 +348,7 @@ MIT License - feel free to use this in your projects!
 
 **Q: What's the difference between installing the GitHub App and adding a collaborator?**
 
-A: Installing the GitHub App is the **recommended and modern approach** for Claude Code Web integration. It gives Claude proper app-level permissions. Adding a collaborator is a legacy method that adds a user account with push access. For best results, use the GitHub App installation (which is the default).
+A: Installing the GitHub App is the **proper way** for Claude Code Web integration. It gives Claude proper app-level permissions. Adding a collaborator is a legacy method that adds a user account with push access and is no longer needed or recommended.
 
 **Q: Do I need to install the Claude GitHub App first?**
 
@@ -378,15 +364,11 @@ A: Classic GitHub Personal Access Tokens (required for creating repos) cannot li
 
 **Q: What permissions does ClaudeUp need?**
 
-A: ClaudeUp needs a GitHub token with the `repo` scope to create repositories, manage collaborators, and add repositories to app installations.
+A: ClaudeUp needs a GitHub token with the `repo` scope to create repositories and add repositories to app installations.
 
 **Q: Can I use this for organization repositories?**
 
 A: Yes! Just make sure your token has access to the organization and you have permission to create repositories.
-
-**Q: What's the default Claude username?**
-
-A: By default, ClaudeUp tries to add `claude-code-app` as a collaborator (legacy method). The primary method now is GitHub App installation using the `claude` app slug.
 
 **Q: Does this work with GitHub Enterprise?**
 

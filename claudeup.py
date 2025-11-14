@@ -416,7 +416,7 @@ Thumbs.db
         repo_name: str,
         description: str = "",
         path: Optional[Path] = None,
-        add_collaborator: bool = True,
+        add_collaborator: bool = False,
         install_app: bool = True,
         app_slug: str = "claude",
         installation_id: Optional[int] = None,
@@ -428,7 +428,7 @@ Thumbs.db
             repo_name: Name of the repository
             description: Repository description
             path: Path to initialize repository (defaults to current directory)
-            add_collaborator: Whether to add Claude as collaborator
+            add_collaborator: Whether to add Claude as collaborator (legacy, default False)
             install_app: Whether to install the Claude GitHub App
             app_slug: The slug/name of the GitHub App to install
             installation_id: Optional GitHub App installation ID
@@ -495,14 +495,14 @@ def main():
         help="GitHub personal access token (or set GITHUB_TOKEN environment variable)",
     )
     parser.add_argument(
+        "--add-collaborator",
+        action="store_true",
+        help="Add a collaborator user (legacy method, not recommended)",
+    )
+    parser.add_argument(
         "--claude-username",
         default="claude-code-app",
         help="GitHub username to add as collaborator (default: claude-code-app)",
-    )
-    parser.add_argument(
-        "--no-collaborator",
-        action="store_true",
-        help="Skip adding collaborator",
     )
     parser.add_argument(
         "--no-app",
@@ -557,7 +557,7 @@ def main():
             repo_name=args.repo_name,
             description=args.description,
             path=Path(args.path) if args.path else None,
-            add_collaborator=not args.no_collaborator,
+            add_collaborator=args.add_collaborator,
             install_app=not args.no_app,
             app_slug=args.app_slug,
             installation_id=installation_id,
