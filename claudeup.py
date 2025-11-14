@@ -2,15 +2,14 @@
 """
 ClaudeUp - Automate GitHub repository creation for Claude Code Web
 
-This script automates the process of:
-1. Creating a new private GitHub repository
-2. Initializing it locally
-3. Adding Claude as a collaborator
-4. Setting up initial files and pushing
+Automates:
+1. Creating a GitHub repository
+2. Installing the Claude GitHub App
+3. Initializing local git repository
+4. Creating initial files and pushing
 """
 
 import argparse
-import json
 import os
 import subprocess
 import sys
@@ -27,16 +26,14 @@ except ImportError:
 class ClaudeUp:
     """Automate GitHub repository setup for Claude Code Web sessions."""
 
-    def __init__(self, token: str, claude_username: str = "claude-code-app"):
+    def __init__(self, token: str):
         """
         Initialize ClaudeUp.
 
         Args:
             token: GitHub personal access token
-            claude_username: GitHub username to add as collaborator
         """
         self.token = token
-        self.claude_username = claude_username
         self.api_base = "https://api.github.com"
         self.headers = {
             "Authorization": f"token {token}",
@@ -71,14 +68,13 @@ class ClaudeUp:
         response = requests.post(url, headers=self.headers, json=data)
 
         if response.status_code == 201:
-            print(f"✓ Repository '{repo_name}' created successfully")
+            print(f"Repository '{repo_name}' created successfully")
             return response.json()
         elif response.status_code == 422:
             error_msg = response.json().get("message", "Unknown error")
-            print(f"✗ Error: {error_msg}")
+            print(f"Error: {error_msg}")
             if "already exists" in error_msg.lower():
-                print(f"  Repository '{repo_name}' already exists")
-                # Try to get the existing repo
+                print(f"Repository '{repo_name}' already exists")
                 return self.get_repository(repo_name)
             raise Exception(f"Failed to create repository: {error_msg}")
         else:
@@ -104,36 +100,6 @@ class ClaudeUp:
         else:
             raise Exception(f"Failed to get repository: {response.status_code}")
 
-    def add_collaborator(self, repo_full_name: str, username: str) -> bool:
-        """
-        Add a collaborator to the repository.
-
-        Args:
-            repo_full_name: Full repository name (owner/repo)
-            username: GitHub username to add as collaborator
-
-        Returns:
-            True if successful, False otherwise
-        """
-        url = f"{self.api_base}/repos/{repo_full_name}/collaborators/{username}"
-        data = {"permission": "push"}
-
-        response = requests.put(url, headers=self.headers, json=data)
-
-        if response.status_code in [201, 204]:
-            print(f"✓ Added '{username}' as collaborator")
-            return True
-        elif response.status_code == 404:
-            print(f"⚠ Warning: User '{username}' not found on GitHub")
-            print(f"  You may need to manually add the collaborator later")
-            return False
-        else:
-            print(
-                f"⚠ Warning: Failed to add collaborator: {response.status_code}"
-            )
-            print(f"  You may need to manually add '{username}' as a collaborator")
-            return False
-
     def list_installations(self) -> list:
         """
         List GitHub App installations for the authenticated user.
@@ -148,7 +114,7 @@ class ClaudeUp:
             data = response.json()
             return data.get("installations", [])
         else:
-            print(f"⚠ Warning: Failed to list installations: {response.status_code}")
+            print(f"Warning: Failed to list installations: {response.status_code}")
             return []
 
     def find_app_installation(self, app_slug: str) -> Optional[dict]:
@@ -213,45 +179,45 @@ class ClaudeUp:
         if installation_id:
             repo_id = repo_data.get("id")
             if not repo_id:
-                print(f"⚠ Warning: Could not get repository ID")
+                print("Warning: Could not get repository ID")
                 return False
 
             success = self.add_repo_to_app_installation(installation_id, repo_id)
             if success:
-                print(f"✓ Added repository to GitHub App installation (ID: {installation_id})")
+                print(f"Added repository to GitHub App installation (ID: {installation_id})")
                 return True
             else:
-                print(f"⚠ Warning: Failed to add repository to GitHub App installation")
-                print(f"  Verify the installation ID is correct: {installation_id}")
-                print(f"  Check your app settings at: https://github.com/settings/installations")
+                print("Warning: Failed to add repository to GitHub App installation")
+                print(f"Verify the installation ID is correct: {installation_id}")
+                print("Check your app settings at: https://github.com/settings/installations")
                 return False
 
         # Otherwise, try to find the app installation
         installation = self.find_app_installation(app_slug)
 
         if not installation:
-            print(f"⚠ Warning: GitHub App '{app_slug}' not found in your installations")
-            print(f"")
-            print(f"  This usually happens because classic GitHub PATs cannot list app installations.")
-            print(f"  To fix this, you have two options:")
-            print(f"")
-            print(f"  Option 1: Provide the installation ID manually")
-            print(f"    1. Visit: https://github.com/settings/installations")
-            print(f"    2. Click 'Configure' next to the Claude app")
-            print(f"    3. Look at the URL - it ends with /installations/XXXXXXXX")
-            print(f"    4. Copy that number and run: claudeup --installation-id XXXXXXXX {repo_data.get('name', '')}")
-            print(f"")
-            print(f"  Option 2: Manually add the repository")
-            print(f"    1. Visit: https://github.com/settings/installations")
-            print(f"    2. Click 'Configure' next to the Claude app")
-            print(f"    3. Add the repository: {repo_data.get('full_name', '')}")
+            print(f"Warning: GitHub App '{app_slug}' not found in your installations")
+            print("")
+            print("Classic GitHub PATs cannot list app installations.")
+            print("To fix this, you have two options:")
+            print("")
+            print("Option 1: Provide the installation ID")
+            print("  1. Visit: https://github.com/settings/installations")
+            print("  2. Click 'Configure' next to the Claude app")
+            print("  3. Look at the URL - it ends with /installations/XXXXXXXX")
+            print(f"  4. Run: claudeup --installation-id XXXXXXXX {repo_data.get('name', '')}")
+            print("")
+            print("Option 2: Manually add the repository")
+            print("  1. Visit: https://github.com/settings/installations")
+            print("  2. Click 'Configure' next to the Claude app")
+            print(f"  3. Add the repository: {repo_data.get('full_name', '')}")
             return False
 
         installation_id = installation.get("id")
         repo_id = repo_data.get("id")
 
         if not installation_id or not repo_id:
-            print(f"⚠ Warning: Could not get installation ID or repository ID")
+            print("Warning: Could not get installation ID or repository ID")
             return False
 
         # Add repository to the app installation
@@ -259,11 +225,11 @@ class ClaudeUp:
 
         if success:
             app_name = installation.get("app_slug", app_slug)
-            print(f"✓ Added repository to '{app_name}' GitHub App installation")
+            print(f"Added repository to '{app_name}' GitHub App installation")
             return True
         else:
-            print(f"⚠ Warning: Failed to add repository to GitHub App installation")
-            print(f"  You may need to manually add the repository in the app settings")
+            print("Warning: Failed to add repository to GitHub App installation")
+            print("You may need to manually add the repository in the app settings")
             return False
 
     def init_local_repo(self, path: Path, repo_data: dict):
@@ -279,7 +245,7 @@ class ClaudeUp:
         # Initialize git if not already initialized
         if not (path / ".git").exists():
             subprocess.run(["git", "init"], check=True)
-            print(f"✓ Initialized git repository in {path}")
+            print(f"Initialized git repository in {path}")
 
         # Set remote
         clone_url = repo_data["clone_url"]
@@ -301,11 +267,11 @@ class ClaudeUp:
         if result.returncode == 0:
             # Remote exists, update it
             subprocess.run(["git", "remote", "set-url", "origin", ssh_url], check=True)
-            print(f"✓ Updated remote 'origin' to {ssh_url}")
+            print(f"Updated remote 'origin' to {ssh_url}")
         else:
             # Add new remote
             subprocess.run(["git", "remote", "add", "origin", ssh_url], check=True)
-            print(f"✓ Added remote 'origin': {ssh_url}")
+            print(f"Added remote 'origin': {ssh_url}")
 
     def create_initial_files(self, path: Path, repo_name: str, description: str):
         """Create initial repository files."""
@@ -316,16 +282,12 @@ class ClaudeUp:
 
 {description if description else 'A project created with ClaudeUp'}
 
-## About
-
-This repository was automatically set up using ClaudeUp for use with Claude Code Web.
-
 ## Getting Started
 
 [Add your getting started instructions here]
 """
             readme_path.write_text(readme_content)
-            print(f"✓ Created README.md")
+            print("Created README.md")
 
         # Create .gitignore
         gitignore_path = path / ".gitignore"
@@ -359,7 +321,7 @@ Thumbs.db
 .env.local
 """
             gitignore_path.write_text(gitignore_content)
-            print(f"✓ Created .gitignore")
+            print("Created .gitignore")
 
     def commit_and_push(self, branch: str = "main"):
         """Create initial commit and push to GitHub."""
@@ -373,7 +335,7 @@ Thumbs.db
         )
 
         if result.returncode == 0:
-            print("ℹ No changes to commit")
+            print("No changes to commit")
             return
 
         # Commit
@@ -381,7 +343,7 @@ Thumbs.db
             ["git", "commit", "-m", "Initial commit via ClaudeUp"],
             check=True,
         )
-        print(f"✓ Created initial commit")
+        print("Created initial commit")
 
         # Create and checkout branch if not on it
         current_branch = subprocess.run(
@@ -402,21 +364,20 @@ Thumbs.db
                 subprocess.run(["git", "checkout", branch], check=True)
             else:
                 subprocess.run(["git", "checkout", "-b", branch], check=True)
-            print(f"✓ Switched to branch '{branch}'")
+            print(f"Switched to branch '{branch}'")
 
         # Push to remote
         subprocess.run(
             ["git", "push", "-u", "origin", branch],
             check=True,
         )
-        print(f"✓ Pushed to remote branch '{branch}'")
+        print(f"Pushed to remote branch '{branch}'")
 
     def setup(
         self,
         repo_name: str,
         description: str = "",
         path: Optional[Path] = None,
-        add_collaborator: bool = False,
         install_app: bool = True,
         app_slug: str = "claude",
         installation_id: Optional[int] = None,
@@ -428,7 +389,6 @@ Thumbs.db
             repo_name: Name of the repository
             description: Repository description
             path: Path to initialize repository (defaults to current directory)
-            add_collaborator: Whether to add Claude as collaborator (legacy, default False)
             install_app: Whether to install the Claude GitHub App
             app_slug: The slug/name of the GitHub App to install
             installation_id: Optional GitHub App installation ID
@@ -439,18 +399,14 @@ Thumbs.db
             path = Path(path).resolve()
             path.mkdir(parents=True, exist_ok=True)
 
-        print(f"\n🚀 ClaudeUp - Setting up repository '{repo_name}'...\n")
+        print(f"\nClaudeUp - Setting up repository '{repo_name}'...\n")
 
         # Create repository
         repo_data = self.create_repository(repo_name, description)
 
-        # Install GitHub App (preferred method)
+        # Install GitHub App
         if install_app:
             self.install_github_app(repo_data, app_slug, installation_id)
-
-        # Add collaborator (legacy method, kept for backwards compatibility)
-        if add_collaborator and self.claude_username:
-            self.add_collaborator(repo_data["full_name"], self.claude_username)
 
         # Initialize local repository
         self.init_local_repo(path, repo_data)
@@ -462,12 +418,12 @@ Thumbs.db
         try:
             self.commit_and_push()
         except subprocess.CalledProcessError as e:
-            print(f"⚠ Warning: Failed to push to remote: {e}")
-            print(f"  You can manually push later with: git push -u origin main")
+            print(f"Warning: Failed to push to remote: {e}")
+            print("You can manually push later with: git push -u origin main")
 
-        print(f"\n✅ Repository setup complete!")
-        print(f"   URL: {repo_data['html_url']}")
-        print(f"   Path: {path}")
+        print(f"\nRepository setup complete!")
+        print(f"URL: {repo_data['html_url']}")
+        print(f"Path: {path}")
 
 
 def main():
@@ -493,16 +449,6 @@ def main():
     parser.add_argument(
         "--token",
         help="GitHub personal access token (or set GITHUB_TOKEN environment variable)",
-    )
-    parser.add_argument(
-        "--add-collaborator",
-        action="store_true",
-        help="Add a collaborator user (legacy method, not recommended)",
-    )
-    parser.add_argument(
-        "--claude-username",
-        default="claude-code-app",
-        help="GitHub username to add as collaborator (default: claude-code-app)",
     )
     parser.add_argument(
         "--no-app",
@@ -549,7 +495,7 @@ def main():
                 print(f"Warning: CLAUDE_INSTALLATION_ID env var is not a valid number: {env_installation_id}")
 
     # Create ClaudeUp instance
-    claudeup = ClaudeUp(token, args.claude_username)
+    claudeup = ClaudeUp(token)
 
     # Run setup
     try:
@@ -557,13 +503,12 @@ def main():
             repo_name=args.repo_name,
             description=args.description,
             path=Path(args.path) if args.path else None,
-            add_collaborator=args.add_collaborator,
             install_app=not args.no_app,
             app_slug=args.app_slug,
             installation_id=installation_id,
         )
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
         sys.exit(1)
 
 
