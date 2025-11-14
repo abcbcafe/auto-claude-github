@@ -86,44 +86,49 @@ echo 'export GITHUB_TOKEN=your_token_here' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-### Get Your Claude App Installation ID
+### Get Your Claude App Installation ID (One-time setup)
 
-Because classic GitHub tokens can't list app installations, you'll need to provide the installation ID manually:
+Because classic GitHub tokens can't list app installations, you'll need to provide the installation ID. **Do this once:**
 
 1. Visit [GitHub Settings > Installations](https://github.com/settings/installations)
 2. Click "Configure" next to the Claude app
 3. Look at the URL in your browser - it ends with `/installations/XXXXXXXX`
 4. Copy that number (e.g., `12345678`)
-5. Use it with claudeup: `claudeup my-project --installation-id 12345678`
-
-**Tip:** Set it as an environment variable for convenience:
+5. Add it to your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 export CLAUDE_INSTALLATION_ID=12345678
 ```
 
-Then create an alias in your `~/.bashrc` or `~/.zshrc`:
+6. Reload your shell:
 
 ```bash
-alias claudeup='claudeup --installation-id $CLAUDE_INSTALLATION_ID'
+source ~/.bashrc  # or source ~/.zshrc
 ```
+
+**That's it!** ClaudeUp will automatically use this environment variable. No need to pass `--installation-id` every time.
+
+Alternatively, you can pass it manually each time: `claudeup my-project --installation-id 12345678`
 
 ## Usage
 
 ### Basic Usage
 
 ```bash
-# Create a new repository with GitHub App installation
-claudeup my-project --installation-id 12345678
+# Create a new repository (uses CLAUDE_INSTALLATION_ID from environment)
+claudeup my-project
 
 # Create with a description
-claudeup my-project --installation-id 12345678 -d "A cool new project"
+claudeup my-project -d "A cool new project"
 
 # Create in a specific directory
-claudeup my-project --installation-id 12345678 -p ~/projects/my-project
+claudeup my-project -p ~/projects/my-project
+
+# Override environment with specific installation ID
+claudeup my-project --installation-id 12345678
 
 # Pass token directly (not recommended for security)
-claudeup my-project --installation-id 12345678 --token ghp_yourtokenhere
+claudeup my-project --token ghp_yourtokenhere
 ```
 
 ### Advanced Options
@@ -162,7 +167,7 @@ optional arguments:
   -d, --description     Repository description
   -p, --path            Path to initialize repository (defaults to current directory)
   --token               GitHub personal access token (or set GITHUB_TOKEN env var)
-  --installation-id     GitHub App installation ID (find at github.com/settings/installations)
+  --installation-id     GitHub App installation ID (or set CLAUDE_INSTALLATION_ID env var)
   --no-app              Skip installing GitHub App (not recommended)
   --app-slug            GitHub App slug to install (default: claude)
   --claude-username     GitHub username to add as collaborator (default: claude-code-app)
@@ -246,20 +251,26 @@ claudeup my-project --token ghp_yourtokenhere
 
 This warning appears because classic GitHub Personal Access Tokens cannot list app installations (a GitHub API limitation). To fix:
 
-**Solution 1: Provide the installation ID (Recommended)**
+**Solution 1: Set the environment variable (Recommended)**
 
 1. Visit [GitHub Settings > Installations](https://github.com/settings/installations)
 2. Click "Configure" next to the Claude app
 3. Look at the URL - it ends with `/installations/XXXXXXXX`
-4. Copy that number and run: `claudeup my-repo --installation-id XXXXXXXX`
+4. Add to your `~/.bashrc` or `~/.zshrc`: `export CLAUDE_INSTALLATION_ID=XXXXXXXX`
+5. Reload: `source ~/.bashrc`
+6. Run claudeup again: `claudeup my-repo`
 
-**Solution 2: Manually add the repository**
+**Solution 2: Pass it on the command line**
+
+Run: `claudeup my-repo --installation-id XXXXXXXX`
+
+**Solution 3: Manually add the repository**
 
 1. Visit [GitHub Settings > Installations](https://github.com/settings/installations)
 2. Click "Configure" next to the Claude app
 3. Under "Repository access", add your new repository
 
-**Solution 3: Skip app installation (not recommended)**
+**Solution 4: Skip app installation (not recommended)**
 
 Use `--no-app` to skip app installation entirely
 
@@ -357,12 +368,13 @@ A: Installing the GitHub App is the **recommended and modern approach** for Clau
 
 A: Yes! Before running claudeup:
 1. Install the Claude GitHub App at https://github.com/apps/claude
-2. Get your installation ID from https://github.com/settings/installations (see the URL)
-3. Run claudeup with `--installation-id` to automatically add repositories to the app
+2. Get your installation ID from https://github.com/settings/installations (look at the URL)
+3. Set `export CLAUDE_INSTALLATION_ID=your_id` in your shell config
+4. Run claudeup - it will automatically use the environment variable
 
 **Q: Why do I need to provide the installation ID?**
 
-A: Classic GitHub Personal Access Tokens (required for creating repos) cannot list GitHub App installations due to API limitations. Providing the installation ID manually bypasses this limitation. You only need to find it once, then can save it as an environment variable.
+A: Classic GitHub Personal Access Tokens (required for creating repos) cannot list GitHub App installations due to API limitations. Setting the `CLAUDE_INSTALLATION_ID` environment variable once bypasses this limitation - you never have to think about it again.
 
 **Q: What permissions does ClaudeUp need?**
 

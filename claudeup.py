@@ -517,7 +517,7 @@ def main():
     parser.add_argument(
         "--installation-id",
         type=int,
-        help="GitHub App installation ID (find at https://github.com/settings/installations)",
+        help="GitHub App installation ID (or set CLAUDE_INSTALLATION_ID env var)",
     )
     parser.add_argument(
         "--public",
@@ -538,6 +538,16 @@ def main():
         print("  3. Set it as: export GITHUB_TOKEN=your_token_here")
         sys.exit(1)
 
+    # Get installation ID from args or environment variable
+    installation_id = args.installation_id
+    if installation_id is None:
+        env_installation_id = os.environ.get("CLAUDE_INSTALLATION_ID")
+        if env_installation_id:
+            try:
+                installation_id = int(env_installation_id)
+            except ValueError:
+                print(f"Warning: CLAUDE_INSTALLATION_ID env var is not a valid number: {env_installation_id}")
+
     # Create ClaudeUp instance
     claudeup = ClaudeUp(token, args.claude_username)
 
@@ -550,7 +560,7 @@ def main():
             add_collaborator=not args.no_collaborator,
             install_app=not args.no_app,
             app_slug=args.app_slug,
-            installation_id=args.installation_id,
+            installation_id=installation_id,
         )
     except Exception as e:
         print(f"\n❌ Error: {e}")
