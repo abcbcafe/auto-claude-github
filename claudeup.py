@@ -62,7 +62,7 @@ class ClaudeUp:
             "name": repo_name,
             "description": description,
             "private": private,
-            "auto_init": False,  # We'll initialize locally
+            "auto_init": True,  # Initialize with README to establish default branch
         }
 
         response = requests.post(url, headers=self.headers, json=data)
@@ -326,6 +326,32 @@ Thumbs.db
     def commit_and_push(self, repo_data: dict):
         """Create initial commit and push to GitHub using the repository's default branch."""
         branch = repo_data.get("default_branch", "main")
+
+        # Fetch remote to get the auto-initialized branch
+        print("Fetching remote repository...")
+        subprocess.run(
+            ["git", "fetch", "origin"],
+            check=True,
+        )
+
+        # Check if remote branch exists
+        remote_branch_exists = subprocess.run(
+            ["git", "rev-parse", "--verify", f"origin/{branch}"],
+            capture_output=True,
+        ).returncode == 0
+
+        if remote_branch_exists:
+            # Checkout remote branch
+            subprocess.run(
+                ["git", "checkout", "-b", branch, f"origin/{branch}"],
+                capture_output=True,
+            )
+            print(f"Checked out remote branch '{branch}'")
+        else:
+            # Create new branch
+            subprocess.run(["git", "checkout", "-b", branch], check=True)
+            print(f"Created branch '{branch}'")
+
         # Add all files
         subprocess.run(["git", "add", "."], check=True)
 
@@ -345,27 +371,6 @@ Thumbs.db
             check=True,
         )
         print("Created initial commit")
-
-        # Create and checkout branch if not on it
-        current_branch = subprocess.run(
-            ["git", "branch", "--show-current"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-
-        if current_branch != branch:
-            # Check if branch exists
-            branch_exists = subprocess.run(
-                ["git", "rev-parse", "--verify", branch],
-                capture_output=True,
-            ).returncode == 0
-
-            if branch_exists:
-                subprocess.run(["git", "checkout", branch], check=True)
-            else:
-                subprocess.run(["git", "checkout", "-b", branch], check=True)
-            print(f"Switched to branch '{branch}'")
 
         # Push to remote
         subprocess.run(
