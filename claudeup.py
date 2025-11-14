@@ -323,8 +323,9 @@ Thumbs.db
             gitignore_path.write_text(gitignore_content)
             print("Created .gitignore")
 
-    def commit_and_push(self, branch: str = "main"):
-        """Create initial commit and push to GitHub."""
+    def commit_and_push(self, repo_data: dict):
+        """Create initial commit and push to GitHub using the repository's default branch."""
+        branch = repo_data.get("default_branch", "main")
         # Add all files
         subprocess.run(["git", "add", "."], check=True)
 
@@ -415,11 +416,12 @@ Thumbs.db
         self.create_initial_files(path, repo_name, description)
 
         # Commit and push
+        default_branch = repo_data.get("default_branch", "main")
         try:
-            self.commit_and_push()
+            self.commit_and_push(repo_data)
         except subprocess.CalledProcessError as e:
             print(f"Warning: Failed to push to remote: {e}")
-            print("You can manually push later with: git push -u origin main")
+            print(f"You can manually push later with: git push -u origin {default_branch}")
 
         print(f"\nRepository setup complete!")
         print(f"URL: {repo_data['html_url']}")
