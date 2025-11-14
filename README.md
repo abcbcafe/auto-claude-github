@@ -8,7 +8,7 @@ Automate GitHub repository creation for Claude Code Web.
 - Installs the Claude GitHub App
 - Initializes local git repository
 - Creates initial files (README, .gitignore)
-- Commits and pushes to main branch
+- Commits and pushes to the repository's default branch
 
 ## Prerequisites
 
