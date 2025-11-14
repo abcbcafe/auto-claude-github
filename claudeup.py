@@ -273,7 +273,7 @@ class ClaudeUp:
             subprocess.run(["git", "remote", "add", "origin", ssh_url], check=True)
             print(f"Added remote 'origin': {ssh_url}")
 
-    def create_initial_files(self, path: Path, repo_name: str, description: str):
+    def create_initial_files(self, path: Path, repo_name: str, description: str, instructions: Optional[str] = None):
         """Create initial repository files."""
         # Create README.md
         readme_path = path / "README.md"
@@ -322,6 +322,21 @@ Thumbs.db
 """
             gitignore_path.write_text(gitignore_content)
             print("Created .gitignore")
+
+        # Create .claude/TASK.md with instructions if provided
+        if instructions:
+            claude_dir = path / ".claude"
+            claude_dir.mkdir(exist_ok=True)
+            task_path = claude_dir / "TASK.md"
+            task_content = f"""# Initial Task
+
+{instructions}
+
+---
+*This file was automatically created by ClaudeUp. You can delete it after completing the task.*
+"""
+            task_path.write_text(task_content)
+            print("Created .claude/TASK.md with your instructions")
 
     def commit_and_push(self, branch: str = "main"):
         """Create initial commit and push to GitHub."""
@@ -381,6 +396,7 @@ Thumbs.db
         install_app: bool = True,
         app_slug: str = "claude",
         installation_id: Optional[int] = None,
+        instructions: Optional[str] = None,
     ):
         """
         Complete setup workflow.
@@ -392,6 +408,7 @@ Thumbs.db
             install_app: Whether to install the Claude GitHub App
             app_slug: The slug/name of the GitHub App to install
             installation_id: Optional GitHub App installation ID
+            instructions: Optional instructions to save for Claude Code web
         """
         if path is None:
             path = Path.cwd()
@@ -412,7 +429,7 @@ Thumbs.db
         self.init_local_repo(path, repo_data)
 
         # Create initial files
-        self.create_initial_files(path, repo_name, description)
+        self.create_initial_files(path, repo_name, description, instructions)
 
         # Commit and push
         try:
@@ -425,6 +442,20 @@ Thumbs.db
         print(f"URL: {repo_data['html_url']}")
         print(f"Path: {path}")
 
+        # Display Claude Code web instructions if instructions were provided
+        if instructions:
+            print(f"\n{'='*60}")
+            print("NEXT STEPS: Start Claude Code Web Session")
+            print(f"{'='*60}")
+            print(f"\n1. Open Claude Code web: https://claude.ai/code")
+            print(f"2. Select or search for your repository: {repo_data['full_name']}")
+            print(f"3. Your task has been saved to .claude/TASK.md")
+            print(f"\n   You can copy-paste this task to Claude Code web:")
+            print(f"\n   {'-'*56}")
+            print(f"   {instructions}")
+            print(f"   {'-'*56}")
+            print(f"\nAlternatively, you can ask Claude to read .claude/TASK.md")
+
 
 def main():
     """Main entry point."""
@@ -434,6 +465,12 @@ def main():
     parser.add_argument(
         "repo_name",
         help="Name of the repository to create",
+    )
+    parser.add_argument(
+        "instructions",
+        nargs="?",
+        default=None,
+        help="Optional instructions to send to Claude Code web",
     )
     parser.add_argument(
         "-d",
@@ -506,6 +543,7 @@ def main():
             install_app=not args.no_app,
             app_slug=args.app_slug,
             installation_id=installation_id,
+            instructions=args.instructions,
         )
     except Exception as e:
         print(f"\nError: {e}")

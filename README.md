@@ -9,6 +9,7 @@ Automate GitHub repository creation for Claude Code Web.
 - Initializes local git repository
 - Creates initial files (README, .gitignore)
 - Commits and pushes to main branch
+- Optionally saves task instructions for Claude Code web
 
 ## Prerequisites
 
@@ -76,6 +77,17 @@ claudeup my-project -d "Project description"
 claudeup my-project -p ~/projects/my-project
 ```
 
+**With initial instructions for Claude Code web:**
+
+```bash
+claudeup my-project "Implement a Python app that does something"
+```
+
+This will:
+1. Create the repository
+2. Save your instructions to `.claude/TASK.md`
+3. Display the Claude Code web URL and your task for easy copy-paste
+
 With installation ID override:
 
 ```bash
@@ -91,10 +103,11 @@ claudeup my-project --public
 ## Options
 
 ```
-claudeup <repo_name> [options]
+claudeup <repo_name> [instructions] [options]
 
 Arguments:
   repo_name             Repository name
+  instructions          Optional task instructions for Claude Code web
 
 Options:
   -d, --description     Repository description
