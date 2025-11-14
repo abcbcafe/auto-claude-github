@@ -192,24 +192,59 @@ class ClaudeUp:
         else:
             return False
 
-    def install_github_app(self, repo_data: dict, app_slug: str = "claude") -> bool:
+    def install_github_app(
+        self,
+        repo_data: dict,
+        app_slug: str = "claude",
+        installation_id: Optional[int] = None,
+    ) -> bool:
         """
         Install a GitHub App on the repository.
 
         Args:
             repo_data: Repository data from GitHub API
             app_slug: The slug/name of the GitHub App to install
+            installation_id: Optional installation ID to use directly
 
         Returns:
             True if successful, False otherwise
         """
-        # Find the app installation
+        # If installation ID is provided, use it directly
+        if installation_id:
+            repo_id = repo_data.get("id")
+            if not repo_id:
+                print(f"⚠ Warning: Could not get repository ID")
+                return False
+
+            success = self.add_repo_to_app_installation(installation_id, repo_id)
+            if success:
+                print(f"✓ Added repository to GitHub App installation (ID: {installation_id})")
+                return True
+            else:
+                print(f"⚠ Warning: Failed to add repository to GitHub App installation")
+                print(f"  Verify the installation ID is correct: {installation_id}")
+                print(f"  Check your app settings at: https://github.com/settings/installations")
+                return False
+
+        # Otherwise, try to find the app installation
         installation = self.find_app_installation(app_slug)
 
         if not installation:
             print(f"⚠ Warning: GitHub App '{app_slug}' not found in your installations")
-            print(f"  Please install the app first at: https://github.com/apps/{app_slug}")
-            print(f"  Then run claudeup again or manually add the repository to the app")
+            print(f"")
+            print(f"  This usually happens because classic GitHub PATs cannot list app installations.")
+            print(f"  To fix this, you have two options:")
+            print(f"")
+            print(f"  Option 1: Provide the installation ID manually")
+            print(f"    1. Visit: https://github.com/settings/installations")
+            print(f"    2. Click 'Configure' next to the Claude app")
+            print(f"    3. Look at the URL - it ends with /installations/XXXXXXXX")
+            print(f"    4. Copy that number and run: claudeup --installation-id XXXXXXXX {repo_data.get('name', '')}")
+            print(f"")
+            print(f"  Option 2: Manually add the repository")
+            print(f"    1. Visit: https://github.com/settings/installations")
+            print(f"    2. Click 'Configure' next to the Claude app")
+            print(f"    3. Add the repository: {repo_data.get('full_name', '')}")
             return False
 
         installation_id = installation.get("id")
@@ -384,6 +419,7 @@ Thumbs.db
         add_collaborator: bool = True,
         install_app: bool = True,
         app_slug: str = "claude",
+        installation_id: Optional[int] = None,
     ):
         """
         Complete setup workflow.
@@ -395,6 +431,7 @@ Thumbs.db
             add_collaborator: Whether to add Claude as collaborator
             install_app: Whether to install the Claude GitHub App
             app_slug: The slug/name of the GitHub App to install
+            installation_id: Optional GitHub App installation ID
         """
         if path is None:
             path = Path.cwd()
@@ -409,7 +446,7 @@ Thumbs.db
 
         # Install GitHub App (preferred method)
         if install_app:
-            self.install_github_app(repo_data, app_slug)
+            self.install_github_app(repo_data, app_slug, installation_id)
 
         # Add collaborator (legacy method, kept for backwards compatibility)
         if add_collaborator and self.claude_username:
@@ -478,6 +515,11 @@ def main():
         help="GitHub App slug to install (default: claude)",
     )
     parser.add_argument(
+        "--installation-id",
+        type=int,
+        help="GitHub App installation ID (find at https://github.com/settings/installations)",
+    )
+    parser.add_argument(
         "--public",
         action="store_true",
         help="Create a public repository (default is private)",
@@ -508,6 +550,7 @@ def main():
             add_collaborator=not args.no_collaborator,
             install_app=not args.no_app,
             app_slug=args.app_slug,
+            installation_id=args.installation_id,
         )
     except Exception as e:
         print(f"\n❌ Error: {e}")
