@@ -134,6 +134,103 @@ class ClaudeUp:
             print(f"  You may need to manually add '{username}' as a collaborator")
             return False
 
+    def list_installations(self) -> list:
+        """
+        List GitHub App installations for the authenticated user.
+
+        Returns:
+            List of installation objects
+        """
+        url = f"{self.api_base}/user/installations"
+        response = requests.get(url, headers=self.headers)
+
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("installations", [])
+        else:
+            print(f"⚠ Warning: Failed to list installations: {response.status_code}")
+            return []
+
+    def find_app_installation(self, app_slug: str) -> Optional[dict]:
+        """
+        Find a specific GitHub App installation by app slug.
+
+        Args:
+            app_slug: The slug/name of the GitHub App
+
+        Returns:
+            Installation object if found, None otherwise
+        """
+        installations = self.list_installations()
+
+        for installation in installations:
+            app = installation.get("app_slug") or installation.get("account", {}).get("login", "")
+            if app_slug.lower() in app.lower():
+                return installation
+
+        return None
+
+    def add_repo_to_app_installation(self, installation_id: int, repo_id: int) -> bool:
+        """
+        Add a repository to a GitHub App installation.
+
+        Args:
+            installation_id: The installation ID of the GitHub App
+            repo_id: The repository ID
+
+        Returns:
+            True if successful, False otherwise
+        """
+        url = f"{self.api_base}/user/installations/{installation_id}/repositories/{repo_id}"
+        response = requests.put(url, headers=self.headers)
+
+        if response.status_code in [204]:
+            return True
+        elif response.status_code == 304:
+            # Repository already added
+            return True
+        else:
+            return False
+
+    def install_github_app(self, repo_data: dict, app_slug: str = "claude") -> bool:
+        """
+        Install a GitHub App on the repository.
+
+        Args:
+            repo_data: Repository data from GitHub API
+            app_slug: The slug/name of the GitHub App to install
+
+        Returns:
+            True if successful, False otherwise
+        """
+        # Find the app installation
+        installation = self.find_app_installation(app_slug)
+
+        if not installation:
+            print(f"⚠ Warning: GitHub App '{app_slug}' not found in your installations")
+            print(f"  Please install the app first at: https://github.com/apps/{app_slug}")
+            print(f"  Then run claudeup again or manually add the repository to the app")
+            return False
+
+        installation_id = installation.get("id")
+        repo_id = repo_data.get("id")
+
+        if not installation_id or not repo_id:
+            print(f"⚠ Warning: Could not get installation ID or repository ID")
+            return False
+
+        # Add repository to the app installation
+        success = self.add_repo_to_app_installation(installation_id, repo_id)
+
+        if success:
+            app_name = installation.get("app_slug", app_slug)
+            print(f"✓ Added repository to '{app_name}' GitHub App installation")
+            return True
+        else:
+            print(f"⚠ Warning: Failed to add repository to GitHub App installation")
+            print(f"  You may need to manually add the repository in the app settings")
+            return False
+
     def init_local_repo(self, path: Path, repo_data: dict):
         """
         Initialize local git repository.
@@ -285,6 +382,8 @@ Thumbs.db
         description: str = "",
         path: Optional[Path] = None,
         add_collaborator: bool = True,
+        install_app: bool = True,
+        app_slug: str = "claude",
     ):
         """
         Complete setup workflow.
@@ -294,6 +393,8 @@ Thumbs.db
             description: Repository description
             path: Path to initialize repository (defaults to current directory)
             add_collaborator: Whether to add Claude as collaborator
+            install_app: Whether to install the Claude GitHub App
+            app_slug: The slug/name of the GitHub App to install
         """
         if path is None:
             path = Path.cwd()
@@ -306,7 +407,11 @@ Thumbs.db
         # Create repository
         repo_data = self.create_repository(repo_name, description)
 
-        # Add collaborator
+        # Install GitHub App (preferred method)
+        if install_app:
+            self.install_github_app(repo_data, app_slug)
+
+        # Add collaborator (legacy method, kept for backwards compatibility)
         if add_collaborator and self.claude_username:
             self.add_collaborator(repo_data["full_name"], self.claude_username)
 
@@ -363,6 +468,16 @@ def main():
         help="Skip adding collaborator",
     )
     parser.add_argument(
+        "--no-app",
+        action="store_true",
+        help="Skip installing GitHub App",
+    )
+    parser.add_argument(
+        "--app-slug",
+        default="claude",
+        help="GitHub App slug to install (default: claude)",
+    )
+    parser.add_argument(
         "--public",
         action="store_true",
         help="Create a public repository (default is private)",
@@ -391,6 +506,8 @@ def main():
             description=args.description,
             path=Path(args.path) if args.path else None,
             add_collaborator=not args.no_collaborator,
+            install_app=not args.no_app,
+            app_slug=args.app_slug,
         )
     except Exception as e:
         print(f"\n❌ Error: {e}")
