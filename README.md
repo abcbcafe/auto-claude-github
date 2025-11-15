@@ -4,11 +4,13 @@ Automate GitHub repository creation for Claude Code Web.
 
 ## What it does
 
-- Creates a GitHub repository
+- Creates a GitHub repository with an initialized default branch
 - Installs the Claude GitHub App
 - Initializes local git repository
 - Creates initial files (README, .gitignore)
 - Commits and pushes to the repository's default branch
+
+**Note:** The repository is created with `auto_init=True` to ensure the default branch exists from the start. This prevents PR branches from becoming the default branch when using Claude Code Web on newly created repositories.
 
 ## Prerequisites
 
